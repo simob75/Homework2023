@@ -11,7 +11,12 @@ contract Crowdsale{
 	uint256 public maxTokens;
 	uint256 public tokenSold;
 	address public owner;
-
+	//add status to the contract
+	enum Status { Open, Closed }
+    	Status public status = Status.Closed;
+    	bytes32 public currStatus = "Closed";
+    	uint256 timeToBuy;
+    	//end
 	mapping(address=>bool) public allowList;
 
 	event Buy(uint256 _amount, address indexed _buyer);
@@ -34,6 +39,32 @@ contract Crowdsale{
 		maxTokens = _maxTokens;
 	}
 
+	//Set status
+	function setCurrStatus(Status _status) internal{
+        if ( _status == Status.Closed) {
+            currStatus = "Closed";
+        } else if (_status == Status.Open) {
+            currStatus = "Open";
+        }
+    }
+    //onlyOwner
+    function isOpen() public onlyOwner returns(bool){
+    timeToBuy = block.timestamp;
+    status = Status.Open;
+    setCurrStatus(status);
+    return status == Status.Open;   
+    }
+
+    //onlyOwner
+    function isClosed() public onlyOwner returns(bool){
+    timeToBuy = block.timestamp;
+    status = Status.Closed;
+    setCurrStatus(status);
+    return status == Status.Closed;   
+    }
+    //End set status code
+
+
 	receive() external payable{
 		uint256 amount = msg.value / price;
 		buyTokens(amount * 1e18);
@@ -44,6 +75,8 @@ contract Crowdsale{
     }
 
 	function buyTokens(uint256 _amount) public payable {
+		require(timeToBuy <= block.timestamp);
+        require(status == Status.Open);
 		require(allowList[msg.sender]==true, 'Address not withelisted');
 		require(msg.value == (_amount / 1e18)* price, 'Not enough ether');
 		require(token.balanceOf(address(this))>= _amount);
@@ -69,7 +102,5 @@ contract Crowdsale{
 
 		emit Finalize(tokenSold, value);
 	}
-
-
 
 }
